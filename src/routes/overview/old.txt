@@ -1,0 +1,196 @@
+
+/*
+      {/* PHẦN 2: HEATMAP CHI NHÁNH */}
+      <ChartCard title="Phân bố dư nợ theo chi nhánh (Heatmap)">
+        <ResponsiveContainer width="100%" height={320}>
+          <Treemap
+            data={branchHeatmap}
+            dataKey="eop_balance"
+            aspectRatio={4 / 3}
+            stroke="#fff"
+            fill={COLORS.primary}
+            content={<CustomTreemapContent />}
+          />
+        </ResponsiveContainer>
+      </ChartCard>
+
+      {/* PHẦN 3: BIỂU ĐỒ XU HƯỚNG - DUAL AXIS */}
+      <ChartCard title="Xu hướng dư nợ & NPL theo chi nhánh (Dual Axis)">
+        <ResponsiveContainer width="100%" height={320}>
+          <LineChart data={trend}>
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+            <XAxis dataKey="period" stroke={COLORS.muted} />
+
+            {/* Trục Y bên trái: Dư nợ */}
+            <YAxis
+              yAxisId="left"
+              stroke={COLORS.primary}
+              tickFormatter={(value) => (value / 1000).toFixed(0) + "K"}
+            />
+
+            {/* Trục Y bên phải: NPL */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke={COLORS.danger}
+              domain={[0, 0.1]}
+              tickFormatter={(value) => (value * 100).toFixed(1) + "%"}
+            />
+
+            <Tooltip
+              contentStyle={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: "8px",
+                padding: "12px",
+              }}
+              labelStyle={{ color: COLORS.primary, fontWeight: "bold" }}
+              formatter={(value, name) => {
+                if (name === "NPL Ratio")
+                  return [
+                    (Number(value) * 100).toFixed(2) + "%",
+                    "NPL (Nhóm 3-4)",
+                  ];
+                return [Number(value).toLocaleString() + " tỷ", "Dư nợ EOP"];
+              }}
+            />
+            <Legend />
+
+            <Line
+              yAxisId="left"
+              dataKey="eop_balance"
+              stroke={COLORS.primary}
+              strokeWidth={3}
+              name="Dư nợ EOP"
+              dot={{ fill: COLORS.primary, r: 5 }}
+              activeDot={{ r: 7 }}
+            />
+            <Line
+              yAxisId="right"
+              dataKey="npl_ratio"
+              stroke={COLORS.danger}
+              strokeWidth={3}
+              name="NPL Ratio"
+              dot={{ fill: COLORS.danger, r: 5 }}
+              activeDot={{ r: 7 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
+*/
+      {/* PHẦN 5: TOP ALERTS */}
+      <ChartCard title="Top 5 chi nhánh có rủi ro cao nhất">
+        <div className="space-y-3">
+          {alerts.map((a, i) => (
+            <div
+              key={i}
+              className="flex justify-between items-center p-4 rounded-lg border-2 transition-all bg-card hover:scale-[1.02]"
+              style={{
+                borderColor: a.npl_ratio > 0.05 ? COLORS.danger : COLORS.accent,
+              }}
+            >
+              <div className="flex gap-3 items-center">
+                <div
+                  className="flex justify-center items-center w-10 h-10 text-2xl font-bold rounded-full"
+                  style={{
+                    backgroundColor:
+                      a.npl_ratio > 0.05 ? COLORS.danger : COLORS.accent,
+                    color: "#fff",
+                  }}
+                >
+                  {i + 1}
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{a.branch_id}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {a.alert_reason}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className="text-2xl font-bold"
+                  style={{
+                    color: a.npl_ratio > 0.05 ? COLORS.danger : COLORS.accent,
+                  }}
+                >
+                  {(a.npl_ratio * 100).toFixed(2)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Dư nợ: {a.eop_balance?.toLocaleString()} tỷ
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ChartCard>
+interface TreemapProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: BranchHeatmapData;
+  [key: string]: unknown;
+}
+// Custom Treemap Content
+function CustomTreemapContent(props: TreemapProps) {
+  const { x = 0, y = 0, width = 0, height = 0, payload } = props;
+  const { name, eop_balance, npl_ratio } = payload ?? {};
+
+  // Màu sắc theo mức NPL
+  const getColor = (ratio: number) => {
+    if (ratio > 0.03) return COLORS.danger;
+    if (ratio > 0.025) return COLORS.orange;
+    return COLORS.green;
+  };
+
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: npl_ratio !== undefined ? getColor(npl_ratio) : COLORS.primary,
+          stroke: "#fff",
+          strokeWidth: 2,
+        }}
+      />
+      {width > 60 && height > 40 && (
+        <>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 - 10}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={16}
+            fontWeight="bold"
+          >
+            {name}
+          </text>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 + 10}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={14}
+          >
+            {eop_balance?.toLocaleString()} tỷ
+          </text>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 + 28}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={12}
+          >
+            NPL:{" "}
+            {npl_ratio !== undefined ? (npl_ratio * 100).toFixed(2) : "N/A"}%
+          </text>
+        </>
+      )}
+    </g>
+  );
+}
+
